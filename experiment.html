@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en" style="background: #C0C0C0;height: 100%;">
+
+<head>
+    <title>Psychology Study</title>
+    <meta charset="utf-8">
+    <script src="libs/jquery-min.js" type="text/javascript"></script>
+    <script src="libs/underscore-min.js" type="text/javascript"></script>
+    <script src="rms.js" type="text/javascript"></script>
+    <script src="jspsych.js" type="text/javascript"></script>
+    <script src="plugins/jspsych-brms.js" type="text/javascript"></script>
+    <script src="plugins/jspsych-image-cpt.js" type="text/javascript"></script>
+    <script src="plugins/jspsych-survey-likert.js" type="text/javascript"></script>
+    <script src="plugins/jspsych-survey-multi-choice.js" type="text/javascript"></script>
+    <script src="plugins/jspsych-survey-multi-select.js" type="text/javascript"></script>
+    <script src="plugins/jspsych-survey-text.js" type="text/javascript"></script>
+    <script src="plugins/jspsych-instructions.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="css/jspsych.css" type="text/css"></link>
+    <script>
+        // Shuffle list function
+        function shuffle(array) {
+            let currentIndex = array.length,
+                randomIndex;
+
+            // While there remain elements to shuffle...
+            while (currentIndex != 0) {
+                // Pick a remaining element...
+                let randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                // And swap it with the current element.
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex], array[currentIndex]
+                ];
+            }
+
+            return array;
+        }
+
+        // Downlowd file function
+        function download(filename, text) {
+            let element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+        // Create survey trials add 3 quesions in each trial 
+        function getSurveyTrials(survey_type, survey_name, questions, survey_direction, labels) {
+            let survey_trials = [];
+            for (let i = 0; i < questions.length; i += 3) {
+                survey_trials.push({
+                    questions: [{
+                        labels: labels,
+                        prompt: questions[i],
+                        required: true
+                    }, {
+                        labels: labels,
+                        prompt: questions[i + 1],
+                        required: true
+                    }, {
+                        labels: labels,
+                        prompt: questions[i + 2],
+                        required: true
+                    }],
+                    type: survey_type,
+                    direction: survey_direction,
+                    name: survey_name + "_" + i
+                });
+            }
+            return survey_trials;
+        }
+
+        // Create start experiment trials, surveys and instructions
+        const start = [{
+            pages: [
+                "השאלות וההוראות לניסוי מנוסחות בלשון נקבה, אך מתייחסות לשני המינים."
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            name: "gender_instructions"
+        }, {
+            questions: [{
+                options: ["גבר", "אישה", "אחר"],
+                prompt: "כיצד את מגדירה עצמך?",
+                required: true
+            }, {
+                options: ["ימין", "שמאל", "אחר"],
+                prompt: "מהי היד הדומיננטית שלך?",
+                required: true
+            }, {
+                options: ["עברית", "ערבית", "אנגלית", "אחר"],
+                prompt: "מהי שפת האם שלך?",
+                required: true
+            }],
+            type: "survey-multi-choice",
+            direction: "rtl",
+            name: "question_start_1"
+        }, {
+            questions: [{
+                rows: 1.0,
+                columns: 2.0,
+                value: "",
+                prompt: "מהו גילך?",
+                required: true
+            }],
+            type: "survey-text",
+            direction: "rtl",
+            name: "age_q"
+        }, {
+            questions: [{
+                options: ["כן", "לא"],
+                prompt: "האם אובחנת בעבר כלוקה בהפרעת קשב?",
+                required: true
+            }],
+            type: "survey-multi-choice",
+            direction: "rtl",
+            name: "attention_1"
+        }, {
+            questions: [{
+                labels: ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+                prompt: "במידה ולא, מ-1 עד 9 עד כמה את חשה שיש לך הפרעת קשב?",
+                required: false
+            }],
+            type: "survey-likert",
+            direction: "rtl",
+            name: "attention_2"
+        }];
+
+        // Create ASRS instructions
+        const asrs_instructions = {
+            pages: [
+                "עבור כל אחד מהמצבים המתוארים בהיגדים הבאים, אנא סמני עד כמה זה מאפיין אותך<br>השתמשי בסולם הדירוג שלפניך הנע בין \"אף פעם לא\" לבין \"לעיתים תכופות מאד\""
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            name: "intro_asrs"
+        };
+
+        // Create ASRS survey trials
+        function createAsrsTrials() {
+            const asrsQuestions_1 = [
+                "באיזו תכיפות את/ה מתקשה להשלים את הפרטים הקטנים של פרויקט, מהרגע בו החלקים המאתגרים הסתיימו?",
+                "באיזו תכיפות את/ה מתקשה ליצור סדר בדברים, כאשר את/ה מבצע/ת משימה המצריכה ארגון?",
+                "באיזו תכיפות את/ה מתקשה בזכירת פגישות או התחייבויות?",
+                "כאשר מוטלת עלייך משימה המצריכה חשיבה מרובה, באיזו תכיפות את נמנעת או דוחה את התחלתה?",
+                "באיזו תכיפות את מתפתלת או מניעה בקוצר רוח את ידייך או רגלייך, כאשר עלייך לשבת במקום למשך זמן ארוך?",
+                "באיזו תכיפות את מרגישה פעילה יתר על המידה או מרגישה צורך לעשות דברים, כאילו את פועלת על ידי מנוע?",
+
+            ];
+
+            const asrsQuestions_2 = [
+                "באיזו תכיפות את מבצעת שגיאות הנובעות מרשלנות, כאשר עלייך לעבוד על פרויקט משעמם או קשה?",
+                "באיזו תכיפות את מתקשה בשמירה על ריכוז, כאשר את מבצעת עבודה משעממת או עבודה החוזרת על עצמה?",
+                "באיזו תכיפות את מתקשה להתרכז במה שאנשים אומרים לך, אפילו כאשר הם מדברים אלייך באופן ישיר?",
+                "באיזו תכיפות את מאבדת חפצים או מתקשה במציאתם, בעבודה או בבית?",
+                "באיזו תכיפות דעתך מוסחת על ידי פעילות או רעש בסביבתך?",
+                "באיזו תכיפות את קמה ממושבך במהלך פגישה או בכל סיטואציה אחרת, בה מצופה ממך להישאר במקומך?",
+                "באיזו תכיפות את מרגישה חסרת-מנוחה או קצרת רוח?",
+                "באיזו תכיפות את מתקשה להירגע ולהשתחרר כאשר יש לך זמן לעצמך?",
+                "באיזו תכיפות את מוצאת את עצמך מדברת יותר מידי כאשר את בסיטואציה חברתית?",
+                "כאשר את במהלך שיחה, באיזו תכיפות את מוצאת את עצמך מסיימת משפטים של האנשים עימם את מדברת, לפני שהם מסיימים אותם בעצמם?",
+                "באיזו תכיפות את מתקשה לחכות לתורך בסיטואציות בהן את נדרשת לכך?",
+                "באיזו תכיפות את מפריעה לאחרים כאשר הם עסוקים?"
+            ]
+
+            const asrsLabels = [
+                "אף פעם ולא",
+                "לעיתים רחוקות",
+                "לפעמים",
+                "לעיתים קרובות",
+                "לעיתים תכופות מאוד"
+            ]
+
+            asrs_1 = getSurveyTrials("survey-likert", "ASRS_1", asrsQuestions_1, "rtl", asrsLabels);
+            asrs_2 = getSurveyTrials("survey-likert", "ASRS_2", asrsQuestions_2, "rtl", asrsLabels);
+            return [...asrs_1, ...asrs_2];
+        }
+
+        // Barrat instructions
+        const barratt_instructions = {
+            pages: [
+                "עבור כל אחד מהמצבים המתוארים בהיגדים הבאים, אנא סמני עד כמה זה מאפיין אותך<br>השתמשי בסולם הדירוג שלפניך הנע בין לעתים רחוקות לבין כמעט תמיד"
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            name: "instructions"
+        }
+
+        // Create barrat scale array
+        function createBarratScale() {
+            const barrattQuestions = [
+                "אני מתכננת משימות בקפידה.",
+                "אני עושה דברים בלי לחשוב.",
+                "אני מחליטה מהר.",
+                "איני מפנה תשומת לב",
+                "אני ברת מזל.",
+                "המחשבות שלי מתרוצצות.",
+                "אני מתכננת טיולים הרבה לפני הזמן.",
+                "אני בשליטה עצמית.",
+                "אני מתרכזת בקלות",
+                "אני חוסכת כסף באופן קבוע",
+                "אני 'מתפתלת' בהצגות או הרצאות.",
+                "המחשבות שלי זהירות",
+                "אני פועלת לביטחון תעסוקתי",
+                "אני אומרת דברים בלי לחשוב.",
+                "אני אוהבת לחשוב על בעיות מורכבות.",
+                "אני נוהגת להחליף עבודות.",
+                "אני פועלת על סמך דחפים.",
+                "אני משתעממת בקלות בעת פתירת בעיות מורכבות",
+                "אני חיה את הרגע.",
+                "המחשבות שלי יציבות",
+                "אני עוברת דירה לעיתים קרובות",
+                "אני קונה דברים בלהט הרגע.",
+                "אני יכולה לחשוב רק על דבר אחד בכל רגע.",
+                "אני מחליפה תחביבים.",
+                "אני מוציאה כסף יותר מההכנסות שלי",
+                "כאשר אני חושבת על משהו, פורצות לי מחשבות חיצוניות",
+                "ההווה מעסיק אותי יותר מאשר העתיד",
+                "אני חסרת מנוחה בהצגות או הרצאות.",
+                "אני אוהבת פאזלים.",
+                "המחשבה שלי מכוונת לעתיד."
+
+            ]
+
+            const barrattLabels = [
+                "לעולם לא \ לעיתים רחוקות",
+                "באופן ממוצע",
+                "לעתים קרובות",
+                "תמיד \ כמעט תמיד"
+            ];
+
+            return getSurveyTrials("survey-likert", "Barratt", barrattQuestions, "rtl", barrattLabels);
+
+        }
+
+        // Create RMS trials instructions
+        const rms_instructions = {
+            pages: [
+                "בניסוי זה יוצגו ריבועים צבעוניים מרצדים, ומדי פעם יופיעו עליהם גירויים שונים. מטרתך היא לזהות היכן מופיע גירוי – האם מימין או משמאל לנקודה בה את מתמקדת במסך.",
+                "קצב הופעת הגירויים בניסוי מאוד משתנה. לפעמים הגירויים יופיעו במהירות בזה אחר זה, ולפעמים ייקח להם זמן. ",
+                "חשוב לנו מאוד לדעת מתי בדיוק התחילו להופיע הגירויים. לכן נבקש ממך למקד את המבט בצלב שבמרכז המסך, וללחוץ על מקש התשובה ברגע שאת יודעת את התשובה. אנא היי הכי מדוייקת והכי מהירה שאת יכולה להיות. ",
+                "אם ראית גירוי משמאל מרכז המסך, יש ללחוץ על המקש Q אם ראית גירוי מימין למרכז המסך, יש ללחוץ על המקש P.",
+                "כעת נעשה אימון קצר למטלה כדי לוודא שההוראות מובנות, במידה וישנן שאלות את מוזמנת לפנות לנסיין"
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            name: "rms_instructions"
+        };
+
+        // Create RMS main trials instuctions
+        const rms_main_instructions = {
+            pages: [
+                "כעת נתחיל את המטלה. נבקשך לשבת בנוחות ככל האפשר ולמקם את האצבעות על שני המקשים P-ו Q. כשאת מוכנה, הקישי המשך."
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            name: "rms_main_instructions"
+        };
+
+        // Create RMS trials
+        function getRmsTrials(images, block, validate = false) {
+            rms_trials = []
+                // For each image create RMS trial
+            shuffle(images).forEach(element => {
+                rms_trials.push({
+                    type: "bRMS",
+                    stimulus: element,
+                    choices: ["q", "p"],
+                    response_ends_trial: true,
+                    post_trial_gap: 400,
+                    stimulus_opacity: 0.3,
+                    right_up: ['P'],
+                    left_down: ['Q'],
+                    stimulus_block: block,
+                    validate: validate,
+                    validationCorrect: "images/validations/correct.png",
+                    validationIncorrect: "images/validations/incorrect.png"
+                });
+            });
+
+            return rms_trials;
+        }
+
+        // CPT instructions
+        const cpt_instructions = {
+            pages: [
+                "בחלק הבא, יוצגו על המסך צורות שונות בצבעים שונים. עלייך ללחוץ על מקש הרווח אך ורק כשתראי ריבוע אדום",
+                "כעת נעשה אימון קצר למטלה כדי לוודא שההוראות מובנות, במידה וישנן שאלות את מוזמנת לפנות לנסיין"
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            name: "cpt_instructions_1"
+        }
+
+        // CPT aftar practice instractions
+        const cpt_main_instructions = {
+            pages: [
+                "כעת נתחיל את המטלה. נבקשך לשבת בנוחות ככל האפשר ולמקם את ידך על מקש הרווח. כשאת מוכנה, הקישי המשך."
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            name: "instructions_2"
+        }
+
+        // Create CPT trials
+        function createCpt(cptPercent, otherPercent, trialCount, ifValidate) {
+            const cptGaps = [1000, 1500, 2000, 2500];
+            const cptDuration = 100;
+            const size = 1.8;
+            const stimulusShape = "square";
+            const stimulusColor = "red";
+            const otherShapes = ["circle", "triangle", "star"];
+            const otherColors = ["yellow", "green", "blue"];
+
+            const cpt_main_instructions = {
+                pages: [
+                    "כעת נתחיל את המטלה. נבקשך לשבת בנוחות ככל האפשר ולמקם את ידך על מקש הרווח. כשאת מוכנה, הקישי המשך."
+                ],
+                show_clickable_nav: true,
+                type: "instructions",
+                direction: "rtl",
+                name: "instructions_2"
+            }
+
+            let gaps = [];
+            for (let i = 0; i < (trialCount / cptGaps.length); i++) {
+                cptGaps.forEach(element => {
+                    gaps.push(element);
+                });
+            }
+
+            gaps = shuffle(gaps);
+
+            cpt_trials = [];
+            for (let i = 0; i < Math.floor(trialCount * cptPercent); i++) {
+                cpt_trials.push({
+                    type: "image-cpt",
+                    stimulus: "images/cpt/" + stimulusShape + "_" + stimulusColor + ".png",
+                    validationCorrect: "images/validations/correct.png",
+                    validationIncorrect: "images/validations/incorrect.png",
+                    isStimulus: true,
+                    response_ends_trial: false,
+                    trial_duration: gaps.pop() + cptDuration,
+                    stimulus_duration: cptDuration,
+                    choices: [32],
+                    validate: ifValidate
+                });
+            }
+
+            others = [];
+            for (let i = 0; i < Math.ceil((Math.floor(trialCount * otherPercent) / 3)); i++) {
+                otherShapes.forEach(currentShape => {
+                    others.push({
+                        type: "image-cpt",
+                        stimulus: "images/cpt/" + currentShape + "_" + stimulusColor + ".png",
+                        validationCorrect: "images/validations/correct.png",
+                        validationIncorrect: "images/validations/incorrect.png",
+                        isStimulus: false,
+                        response_ends_trial: false,
+                        trial_duration: gaps.pop() + cptDuration,
+                        stimulus_duration: cptDuration,
+                        choices: [32],
+                        validate: ifValidate
+                    });
+                });
+            }
+
+            others.slice(0, Math.floor(trialCount * otherPercent)).forEach(element => {
+                cpt_trials.push(element);
+            });
+
+
+            others = [];
+            for (let i = 0; i < Math.ceil((Math.floor(trialCount * otherPercent) / 3)); i++) {
+                otherColors.forEach(currentColor => {
+                    others.push({
+                        type: "image-cpt",
+                        stimulus: "images/cpt/" + stimulusShape + "_" + currentColor + ".png",
+                        validationCorrect: "images/validations/correct.png",
+                        validationIncorrect: "images/validations/incorrect.png",
+                        isStimulus: false,
+                        response_ends_trial: false,
+                        trial_duration: gaps.pop() + cptDuration,
+                        stimulus_duration: cptDuration,
+                        choices: [32],
+                        validate: ifValidate
+                    });
+                });
+            }
+
+            others.slice(0, Math.floor(trialCount * otherPercent)).forEach(element => {
+                cpt_trials.push(element);
+            });
+
+            maxValue = trialCount - cpt_trials.length;
+            let count = 0;
+            for (count = 0; count < maxValue; count += 9) {
+                for (let i = 0; i < otherShapes.length; i++) {
+                    for (let j = 0; j < otherColors.length; j++) {
+                        cpt_trials.push({
+                            type: "image-cpt",
+                            stimulus: "images/cpt/" + otherShapes[i] + "_" + otherColors[j] + ".png",
+                            validationCorrect: "images/validations/correct.png",
+                            validationIncorrect: "images/validations/incorrect.png",
+                            isStimulus: false,
+                            trial_duration: gaps.pop() + cptDuration,
+                            stimulus_duration: cptDuration,
+                            response_ends_trial: false,
+                            choices: [32],
+                            validate: ifValidate
+                        });
+                    }
+                }
+            }
+            return cpt_trials.slice(0, trialCount);
+        }
+
+        // Create end experimnt trials
+        const end = [{
+            questions: [{
+                labels: [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5"
+                ],
+                prompt: "מ-1 עד-5, עד כמה הייתה ברורה לך המטלה עם הריבועים המרצדים?",
+                required: true
+            }],
+            type: "survey-likert",
+            direction: "rtl",
+            name: "LAST_1"
+        }, {
+            questions: [{
+                options: [
+                    "כן",
+                    "לא"
+                ],
+                prompt: "האם הייתה לך איזושהי אסטרטגיה?",
+                required: true
+            }],
+            type: "survey-multi-choice",
+            direction: "rtl",
+            name: "LAST_2"
+        }, {
+            questions: [{
+                rows: 7.0,
+                columns: 7.0,
+                value: "",
+                prompt: "אם כן, מהי?",
+                required: true
+            }],
+            type: "survey-text",
+            name: "LAST_3"
+        }, {
+            questions: [{
+                labels: [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5"
+                ],
+                prompt: "מ-1 עד-5, עד כמה הייתה ברורה לך המטלה בה היית צריכה להקיש למראה ריבוע אדום?",
+                required: true
+            }],
+            type: "survey-likert",
+            direction: "rtl",
+            name: "LAST_4"
+        }, {
+            questions: [{
+                options: [
+                    "כן",
+                    "לא"
+                ],
+                prompt: "האם הייתה לך איזושהי אסטרטגיה?",
+                required: true
+            }],
+            type: "survey-multi-choice",
+            direction: "rtl",
+            name: "LAST_5"
+        }, {
+            questions: [{
+                rows: 7.0,
+                columns: 7.0,
+                value: "",
+                prompt: "אם כן, מהי?",
+                required: true
+            }],
+            type: "survey-text",
+            name: "LAST_6"
+        }, {
+            questions: [{
+                labels: [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7"
+                ],
+                prompt: "בהשוואה לנהגת הממוצעת, כיצד היית מגדירה את הנהיגה שלך? כך ש-1 אומר הרבה מתחת לממוצע ו-7 אומר הרבה מעבר לממוצע?",
+                required: false
+            }],
+            type: "survey-likert",
+            direction: "rtl",
+            name: "DRIVE_1"
+        }, {
+            questions: [{
+                rows: 2.0,
+                columns: 1.0,
+                value: "",
+                prompt: "להערכתך, בכמה תאונות דרכים היית מעורבת <bold> כנהגת </bold> במהלך שלושת השנים האחרונות כולל תאונות קטנות וללא נזק",
+                required: false
+            }],
+            type: "survey-text",
+            name: "DRIVE_2"
+        }, {
+            questions: [{
+                rows: 2.0,
+                columns: 1.0,
+                value: "",
+                prompt: "להערכתך, בכמה תאונות דרכים היית מעורבת <bold> כהולכת רגל </bold> במהלך שלושת השנים האחרונות כולל תאונות קטנות וללא נזק",
+                required: true
+            }],
+            type: "survey-text",
+            name: "WALK"
+        }, {
+            pages: [
+                "תודה שהשתתפת בניסוי, לחצי על המשך לסיום הניסוי."
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            name: "end_instructions"
+        }];
+
+        // create CPT timeline
+        let cptTimeline = []
+            // Add cpt practice instructions
+        cptTimeline.push(cpt_instructions);
+        // Create CPT trials (practice) and add to timeline
+        shuffle(createCpt(0.3, 0.175, 15, true)).forEach(function(trial) {
+            cptTimeline.push(trial);
+        });
+        // Add cpt main instructions
+        cptTimeline.push(cpt_main_instructions)
+            // Create CPT trials (main) and add to timeline
+        shuffle(createCpt(0.3, 0.175, 320, false)).forEach(function(trial) {
+            cptTimeline.push(trial);
+        });
+
+        // Create RMS timeline
+
+        //All Practice stimulus
+        const imagesPractice = ["images/rms/f42887_e_001.jpg",
+            "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg",
+            "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg",
+            "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg"
+        ];
+        // All main task stimulus, not reverted
+        const imagesMain = [
+            "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_005.jpg", "images/rms/f42887_e_015.jpg",
+            "images/rms/f42887_e_025.jpg", "images/rms/f42887_e_028.jpg", "images/rms/f42887_e_053.jpg",
+            "images/rms/f42887_e_058.jpg", "images/rms/f42887_e_064.jpg", "images/rms/f42887_e_072.jpg",
+            "images/rms/f42887_e_080.jpg", "images/rms/f42887_e_098.jpg", "images/rms/f42887_e_103.jpg",
+            "images/rms/f42887_e_121.jpg", "images/rms/f42887_e_127.jpg", "images/rms/f42887_e_140.jpg",
+            "images/rms/f42887_e_156.jpg", "images/rms/f42887_e_161.jpg", "images/rms/f42887_e_180.jpg",
+            "images/rms/f42887_e_202.jpg", "images/rms/f42887_e_241.jpg", "images/rms/f42887_e_245.jpg",
+            "images/rms/f42887_e_252.jpg", "images/rms/f42887_e_258.jpg", "images/rms/f42887_e_259.jpg",
+            "images/rms/f42887_e_278.jpg", "images/rms/f42887_e_289.jpg", "images/rms/f42887_e_293.jpg",
+            "images/rms/f42887_e_295.jpg", "images/rms/f42887_e_296.jpg", "images/rms/f42887_e_297.jpg",
+            "images/rms/f42887_e_298.jpg"
+        ];
+        // All main task stimulus, reverted
+        const imagesMainReversed = [
+            "images/rms/f42887_e_001_1.jpg", "images/rms/f42887_e_005_1.jpg", "images/rms/f42887_e_015_1.jpg",
+            "images/rms/f42887_e_025_1.jpg", "images/rms/f42887_e_028_1.jpg", "images/rms/f42887_e_053_1.jpg",
+            "images/rms/f42887_e_058_1.jpg", "images/rms/f42887_e_064_1.jpg", "images/rms/f42887_e_072_1.jpg",
+            "images/rms/f42887_e_080_1.jpg", "images/rms/f42887_e_098_1.jpg", "images/rms/f42887_e_103_1.jpg",
+            "images/rms/f42887_e_121_1.jpg", "images/rms/f42887_e_127_1.jpg", "images/rms/f42887_e_140_1.jpg",
+            "images/rms/f42887_e_156_1.jpg", "images/rms/f42887_e_161_1.jpg", "images/rms/f42887_e_180_1.jpg",
+            "images/rms/f42887_e_202_1.jpg", "images/rms/f42887_e_241_1.jpg", "images/rms/f42887_e_245_1.jpg",
+            "images/rms/f42887_e_252_1.jpg", "images/rms/f42887_e_258_1.jpg", "images/rms/f42887_e_259_1.jpg",
+            "images/rms/f42887_e_278_1.jpg", "images/rms/f42887_e_289_1.jpg", "images/rms/f42887_e_293_1.jpg",
+            "images/rms/f42887_e_295_1.jpg", "images/rms/f42887_e_296_1.jpg", "images/rms/f42887_e_297_1.jpg",
+            "images/rms/f42887_e_298_1.jpg"
+        ];
+
+        // Create RMS timeline
+        let rmsTimeline = [];
+        // Add Rms instructions
+        rmsTimeline.push(rms_instructions);
+        // Create all RMS practice trials
+        trainingRmsTrials = getRmsTrials(imagesPractice, "training", true);
+        // Add all practice trials to RMS timeline in random order (using shuffle function)
+        shuffle(trainingRmsTrials).forEach(function(trial) {
+            rmsTimeline.push(trial);
+        });
+        // Add RMS instuctions (for main trials)
+        rmsTimeline.push(rms_main_instructions);
+        // Create all RMS main trials (reverted and not reverted together)
+        const allMainRmsTrials = getRmsTrials(imagesMain, "main").concat(getRmsTrials(imagesMainReversed, choices, "reversed"));
+        // Add all main trials to RMS timeline in random order (using shuffle function)
+        shuffle(allMainRmsTrials).forEach(function(trial) {
+            rmsTimeline.push(trial);
+        });
+
+        // The final timeline for the experiment
+        let experiment_timeline = []
+
+        // Add start to timeline
+        start.forEach(function(element) {
+            experiment_timeline.push(element);
+        });
+
+        // Add main parts to timeline in random order (using shuffle function)
+        shuffle([cptTimeline]).forEach(function(part) {
+            // shuffle([cptTimeline, rmsTimeline]).forEach(function(part) {
+            part.forEach(function(element) {
+                experiment_timeline.push(element);
+            });
+        });
+
+        // Add ASRS to timeline in random order (using shuffle function)
+        experiment_timeline.push(asrs_instructions);
+        shuffle(createAsrsTrials()).forEach(function(trial) {
+            experiment_timeline.push(trial);
+        });
+
+        // Add Barratt to timeline in random order (using shuffle function)
+        experiment_timeline.push(barratt_instructions);
+        shuffle(createBarratScale()).forEach(function(trial) {
+            experiment_timeline.push(trial);
+        });
+
+        // Add end to timeline 
+        end.forEach(function(trial) {
+            experiment_timeline.push(trial);
+        });
+
+        // Init experiment (and run it)
+        jsPsych.init({
+            timeline: experiment_timeline,
+            fullscreen: true,
+            on_finish: function() {
+                // Download subject data as .csv file
+                download("data.csv", jsPsych.data.get().csv());
+            }
+        });
+    </script>
+
+</head>
+</head>
