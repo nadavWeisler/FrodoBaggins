@@ -109,10 +109,16 @@
                 value: "",
                 prompt: "מהו גילך?",
                 required: true
+            }, {
+                rows: 1.0,
+                columns: 2.0,
+                value: "",
+                prompt: "מספר נבדקת?",
+                required: true
             }],
             type: "survey-text",
             direction: "rtl",
-            name: "age_q"
+            name: "age_subject_q"
         }, {
             questions: [{
                 options: ["כן", "לא"],
@@ -268,8 +274,61 @@
             name: "rms_main_instructions"
         };
 
+        var rms_errors = 0;
+
+        function getRmsPracticeTrials(images, block) {
+            rms_trials = []
+                // For each image create RMS trial
+            shuffle(images).forEach(element => {
+                rms_trials.push({
+                    type: "bRMS",
+                    stimulus: element,
+                    choices: ["q", "p"],
+                    response_ends_trial: true,
+                    post_trial_gap: 400,
+                    stimulus_opacity: 0.3,
+                    right_up: ['P'],
+                    left_down: ['Q'],
+                    stimulus_block: block,
+                    validate: true,
+                    validationCorrect: "images/validations/correct.png",
+                    validationIncorrect: "images/validations/incorrect.png",
+                    on_finish: function(data) {
+                        if (data.correct == false) {
+                            rms_errors++;
+                        }
+                    }
+                });
+            });
+
+            return rms_trials;
+        }
+
         // Create RMS trials
-        function getRmsTrials(images, block, validate = false) {
+        function getRmsTrials(images, block) {
+            rms_trials = []
+                // For each image create RMS trial
+            shuffle(images).forEach(element => {
+                rms_trials.push({
+                    type: "bRMS",
+                    stimulus: element,
+                    choices: ["q", "p"],
+                    response_ends_trial: true,
+                    post_trial_gap: 400,
+                    stimulus_opacity: 0.3,
+                    right_up: ['P'],
+                    left_down: ['Q'],
+                    stimulus_block: block,
+                    validate: false,
+                    validationCorrect: "images/validations/correct.png",
+                    validationIncorrect: "images/validations/incorrect.png"
+                });
+            });
+
+            return rms_trials;
+        }
+
+        function getRmsControlTrials(images, block, validate = false) {
             rms_trials = []
                 // For each image create RMS trial
             shuffle(images).forEach(element => {
@@ -291,7 +350,6 @@
 
             return rms_trials;
         }
-
         // CPT instructions
         const cpt_instructions = {
             pages: [
@@ -381,7 +439,6 @@
             others.slice(0, Math.floor(trialCount * otherPercent)).forEach(element => {
                 cpt_trials.push(element);
             });
-
 
             others = [];
             for (let i = 0; i < Math.ceil((Math.floor(trialCount * otherPercent) / 3)); i++) {
@@ -551,8 +608,8 @@
         }];
 
         // create CPT timeline
-        let cptTimeline = []
-            // Add cpt practice instructions
+        let cptTimeline = [];
+        // Add cpt practice instructions
         cptTimeline.push(cpt_instructions);
         // Create CPT trials (practice) and add to timeline
         shuffle(createCpt(0.3, 0.175, 15, true)).forEach(function(trial) {
@@ -568,7 +625,42 @@
         // Create RMS timeline
 
         //All Practice stimulus
+
+        const rms_training_again_instructions = {
+            pages: [
+                "נראה שתוצאות האימון שלך לא היו מספיק טובות. בבקשה תקראי לנסיין שיסביר לך שנית את המטלה ותנסי שוב.",
+                "במידה ובאימון הבא תקבלי עוד פעם תוצאות לא טובות, הניסוי יפסיק ותקבלי את התשלום או הקרדיט היחסיים לזמן ששהית בניסוי"
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            name: "instructions_rms_again"
+        }
+
+        const rms_training_second_catch = {
+            pages: [
+                "נראה שאין שיפור בתוצאות האימון. הניסוי נגמר, אנא קראי לנסיין."
+            ],
+            show_clickable_nav: true,
+            type: "instructions",
+            direction: "rtl",
+            on_finish: function(data) {
+                jsPsych.endExperiment();
+            },
+            name: "instructions_rms_again"
+        }
+
+        const if_rms_trial_2 = {
+            timeline: [rms_training_second_catch],
+            conditional_function: function() {
+                console.log(rms_errors);
+                return (rms_errors > 3);
+            }
+        }
+
         const imagesPractice = ["images/rms/f42887_e_001.jpg",
+            "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg",
+            "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg",
             "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg",
             "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg",
             "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg"
@@ -607,19 +699,44 @@
         // Add Rms instructions
         rmsTimeline.push(rms_instructions);
         // Create all RMS practice trials
-        trainingRmsTrials = getRmsTrials(imagesPractice, "training", true);
+        const trainingRmsTrials = getRmsPracticeTrials(imagesPractice, "training");
+
+        const if_rms_trial = {
+            timeline: [rms_training_again_instructions, ...shuffle(trainingRmsTrials), if_rms_trial_2],
+            conditional_function: function() {
+                if (rms_errors > 3) {
+                    rms_errors = 0;
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        };
+
         // Add all practice trials to RMS timeline in random order (using shuffle function)
         shuffle(trainingRmsTrials).forEach(function(trial) {
             rmsTimeline.push(trial);
         });
+        rmsTimeline.push(if_rms_trial);
         // Add RMS instuctions (for main trials)
         rmsTimeline.push(rms_main_instructions);
         // Create all RMS main trials (reverted and not reverted together)
-        const allMainRmsTrials = getRmsTrials(imagesMain, "main").concat(getRmsTrials(imagesMainReversed, choices, "reversed"));
+        const allMainRmsTrials = getRmsTrials(imagesMain, "main").concat(getRmsTrials(imagesMainReversed, "reversed"));
         // Add all main trials to RMS timeline in random order (using shuffle function)
         shuffle(allMainRmsTrials).forEach(function(trial) {
             rmsTimeline.push(trial);
         });
+
+        let rmsControlTimeline = [];
+        // Add RMS control instructions
+        rmsControlTimeline.push(rms_instructions);
+        // Create all RMS control trials
+        const rmsControlTrials = getRmsTrials(imagesMain, "control_main").concat(getRmsTrials(imagesMainReversed, "control_reversed"));
+        // Add all control trials to RMS timeline in random order (using shuffle function)
+        shuffle(rmsControlTrials).forEach(function(trial) {
+            rmsControlTimeline.push(trial);
+        });
+
 
         // The final timeline for the experiment
         let experiment_timeline = []
@@ -630,8 +747,14 @@
         });
 
         // Add main parts to timeline in random order (using shuffle function)
-        shuffle([cptTimeline]).forEach(function(part) {
-            // shuffle([cptTimeline, rmsTimeline]).forEach(function(part) {
+        shuffle([cptTimeline, rmsTimeline]).forEach(function(part) {
+            part.forEach(function(element) {
+                experiment_timeline.push(element);
+            });
+        });
+
+        // Add control parts to timeline in random order (using shuffle function)
+        shuffle([rmsControlTimeline]).forEach(function(part) {
             part.forEach(function(element) {
                 experiment_timeline.push(element);
             });
@@ -653,6 +776,8 @@
         end.forEach(function(trial) {
             experiment_timeline.push(trial);
         });
+
+        experiment_timeline = [...rmsTimeline]
 
         // Init experiment (and run it)
         jsPsych.init({
