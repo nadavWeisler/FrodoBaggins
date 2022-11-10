@@ -767,17 +767,15 @@
         });
 
         // Add Barratt to timeline in random order (using shuffle function)
-        experiment_timeline.push(barratt_instructions);
-        shuffle(createBarratScale()).forEach(function(trial) {
-            experiment_timeline.push(trial);
-        });
+        // experiment_timeline.push(barratt_instructions);
+        // shuffle(createBarratScale()).forEach(function(trial) {
+        //     experiment_timeline.push(trial);
+        // });
 
         // Add end to timeline 
         end.forEach(function(trial) {
             experiment_timeline.push(trial);
         });
-
-        experiment_timeline = [...rmsTimeline]
 
         // Init experiment (and run it)
         jsPsych.init({
