@@ -420,7 +420,7 @@ jsPsych.plugins["bRMS"] = (function() {
                         }, hidden ? trial.mask_duration : trial.stimulus_duration);
                         setTimeoutHandlers.push(newMaskControl);
                     }
-                }
+                };
 
                 if (trial.rms_type === 'RMS') {
                     rms();
@@ -465,8 +465,8 @@ jsPsych.plugins["bRMS"] = (function() {
                 mask_layer = 1;
                 stimulus_layer = 2;
             } else {
-                mask_layer = 2;
-                stimulus_layer = 1;
+                mask_layer = 1;
+                stimulus_layer = 2;
             }
 
             // Make mondrian list

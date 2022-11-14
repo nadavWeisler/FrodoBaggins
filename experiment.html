@@ -76,6 +76,8 @@
             return survey_trials;
         }
 
+        let subjectNumber = 0;
+
         // Create start experiment trials, surveys and instructions
         const start = [{
             pages: [
@@ -114,10 +116,14 @@
                 columns: 2.0,
                 value: "",
                 prompt: "מספר נבדקת?",
-                required: true
+                required: true,
             }],
             type: "survey-text",
             direction: "rtl",
+            on_finish: function(data) {
+                const obj = JSON.parse(data.responses);
+                subjectNumber = obj.Q1;
+            },
             name: "age_subject_q"
         }, {
             questions: [{
@@ -190,64 +196,6 @@
             return [...asrs_1, ...asrs_2];
         }
 
-        // Barrat instructions
-        const barratt_instructions = {
-            pages: [
-                "עבור כל אחד מהמצבים המתוארים בהיגדים הבאים, אנא סמני עד כמה זה מאפיין אותך<br>השתמשי בסולם הדירוג שלפניך הנע בין לעתים רחוקות לבין כמעט תמיד"
-            ],
-            show_clickable_nav: true,
-            type: "instructions",
-            direction: "rtl",
-            name: "instructions"
-        }
-
-        // Create barrat scale array
-        function createBarratScale() {
-            const barrattQuestions = [
-                "אני מתכננת משימות בקפידה.",
-                "אני עושה דברים בלי לחשוב.",
-                "אני מחליטה מהר.",
-                "איני מפנה תשומת לב",
-                "אני ברת מזל.",
-                "המחשבות שלי מתרוצצות.",
-                "אני מתכננת טיולים הרבה לפני הזמן.",
-                "אני בשליטה עצמית.",
-                "אני מתרכזת בקלות",
-                "אני חוסכת כסף באופן קבוע",
-                "אני 'מתפתלת' בהצגות או הרצאות.",
-                "המחשבות שלי זהירות",
-                "אני פועלת לביטחון תעסוקתי",
-                "אני אומרת דברים בלי לחשוב.",
-                "אני אוהבת לחשוב על בעיות מורכבות.",
-                "אני נוהגת להחליף עבודות.",
-                "אני פועלת על סמך דחפים.",
-                "אני משתעממת בקלות בעת פתירת בעיות מורכבות",
-                "אני חיה את הרגע.",
-                "המחשבות שלי יציבות",
-                "אני עוברת דירה לעיתים קרובות",
-                "אני קונה דברים בלהט הרגע.",
-                "אני יכולה לחשוב רק על דבר אחד בכל רגע.",
-                "אני מחליפה תחביבים.",
-                "אני מוציאה כסף יותר מההכנסות שלי",
-                "כאשר אני חושבת על משהו, פורצות לי מחשבות חיצוניות",
-                "ההווה מעסיק אותי יותר מאשר העתיד",
-                "אני חסרת מנוחה בהצגות או הרצאות.",
-                "אני אוהבת פאזלים.",
-                "המחשבה שלי מכוונת לעתיד."
-
-            ]
-
-            const barrattLabels = [
-                "לעולם לא \ לעיתים רחוקות",
-                "באופן ממוצע",
-                "לעתים קרובות",
-                "תמיד \ כמעט תמיד"
-            ];
-
-            return getSurveyTrials("survey-likert", "Barratt", barrattQuestions, "rtl", barrattLabels);
-
-        }
-
         // Create RMS trials instructions
         const rms_instructions = {
             pages: [
@@ -274,8 +222,9 @@
             name: "rms_main_instructions"
         };
 
-        var rms_errors = 0;
+        let rms_errors = 0;
 
+        // Create RMS practice trials>>>>
         function getRmsPracticeTrials(images, block) {
             rms_trials = []
                 // For each image create RMS trial
@@ -328,13 +277,15 @@
             return rms_trials;
         }
 
-        function getRmsControlTrials(images, block, validate = false) {
+        // Create RMS control trials
+        function getRmsControlTrials(images, block) {
             rms_trials = []
                 // For each image create RMS trial
             shuffle(images).forEach(element => {
                 rms_trials.push({
                     type: "bRMS",
                     stimulus: element,
+                    rms_type: "control",
                     choices: ["q", "p"],
                     response_ends_trial: true,
                     post_trial_gap: 400,
@@ -342,7 +293,7 @@
                     right_up: ['P'],
                     left_down: ['Q'],
                     stimulus_block: block,
-                    validate: validate,
+                    validate: false,
                     validationCorrect: "images/validations/correct.png",
                     validationIncorrect: "images/validations/incorrect.png"
                 });
@@ -350,6 +301,7 @@
 
             return rms_trials;
         }
+
         // CPT instructions
         const cpt_instructions = {
             pages: [
@@ -658,6 +610,7 @@
             }
         }
 
+        // All practice trials, same picture for 15 times
         const imagesPractice = ["images/rms/f42887_e_001.jpg",
             "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg",
             "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg",
@@ -665,6 +618,7 @@
             "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg",
             "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_001.jpg"
         ];
+
         // All main task stimulus, not reverted
         const imagesMain = [
             "images/rms/f42887_e_001.jpg", "images/rms/f42887_e_005.jpg", "images/rms/f42887_e_015.jpg",
@@ -679,6 +633,7 @@
             "images/rms/f42887_e_295.jpg", "images/rms/f42887_e_296.jpg", "images/rms/f42887_e_297.jpg",
             "images/rms/f42887_e_298.jpg"
         ];
+
         // All main task stimulus, reverted
         const imagesMainReversed = [
             "images/rms/f42887_e_001_1.jpg", "images/rms/f42887_e_005_1.jpg", "images/rms/f42887_e_015_1.jpg",
@@ -717,26 +672,32 @@
         shuffle(trainingRmsTrials).forEach(function(trial) {
             rmsTimeline.push(trial);
         });
+
         rmsTimeline.push(if_rms_trial);
+
         // Add RMS instuctions (for main trials)
         rmsTimeline.push(rms_main_instructions);
+
         // Create all RMS main trials (reverted and not reverted together)
         const allMainRmsTrials = getRmsTrials(imagesMain, "main").concat(getRmsTrials(imagesMainReversed, "reversed"));
+
         // Add all main trials to RMS timeline in random order (using shuffle function)
         shuffle(allMainRmsTrials).forEach(function(trial) {
             rmsTimeline.push(trial);
         });
 
         let rmsControlTimeline = [];
+
         // Add RMS control instructions
         rmsControlTimeline.push(rms_instructions);
+
         // Create all RMS control trials
-        const rmsControlTrials = getRmsTrials(imagesMain, "control_main").concat(getRmsTrials(imagesMainReversed, "control_reversed"));
+        const rmsControlTrials = getRmsControlTrials(imagesMain, "control_main").concat(getRmsControlTrials(imagesMainReversed, "control_reversed"));
+
         // Add all control trials to RMS timeline in random order (using shuffle function)
         shuffle(rmsControlTrials).forEach(function(trial) {
             rmsControlTimeline.push(trial);
         });
-
 
         // The final timeline for the experiment
         let experiment_timeline = []
@@ -746,8 +707,9 @@
             experiment_timeline.push(element);
         });
 
-        // Add main parts to timeline in random order (using shuffle function)
-        shuffle([cptTimeline, rmsTimeline]).forEach(function(part) {
+        // Add main parts to timeline the order changed if subject number is even or odd
+        const order = subjectNumber % 2 == 0 ? [cptTimeline, rmsTimeline] : [rmsTimeline, cptTimeline];
+        shuffle(order).forEach(function(part) {
             part.forEach(function(element) {
                 experiment_timeline.push(element);
             });
@@ -766,16 +728,12 @@
             experiment_timeline.push(trial);
         });
 
-        // Add Barratt to timeline in random order (using shuffle function)
-        // experiment_timeline.push(barratt_instructions);
-        // shuffle(createBarratScale()).forEach(function(trial) {
-        //     experiment_timeline.push(trial);
-        // });
-
         // Add end to timeline 
         end.forEach(function(trial) {
             experiment_timeline.push(trial);
         });
+
+        // experiment_timeline = [...rmsControlTimeline]
 
         // Init experiment (and run it)
         jsPsych.init({
